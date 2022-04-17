@@ -1,6 +1,6 @@
 #include "input_reader.h"
 
-namespace transport_catalogue::input_reader
+namespace transport_catalogue::input_reader 
 {
 	void ProcessInput(TransportCatalogue& trans_cat_, std::istream& is)
 	{
