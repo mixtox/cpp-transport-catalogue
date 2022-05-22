@@ -13,19 +13,11 @@
 #include <utility>
 #include <cctype>
 #include <functional>
+#include <set>
 
-
-namespace detail
-{
-    std::pair<std::string_view, std::string_view> Split(std::string_view, char, int count = 1);
-    std::string_view DeleteLeftSpaces(std::string_view);
-    std::string_view DeleteRightSpaces(std::string_view);
-    std::string_view TrimString(std::string_view);
-}
 
 namespace transport_catalogue
 {
-
     enum class InputQueryType
     {
         Undefined,
@@ -49,9 +41,8 @@ namespace transport_catalogue
 
     struct RequestQuery
     {
-        RequestQueryType type;
+        RequestQueryType type = RequestQueryType :: Undefined;
         std::string query;
-        std::string reply;
     };
 
     struct Stop
@@ -59,8 +50,6 @@ namespace transport_catalogue
     public:
         std::string name;
         geo::Coordinates coordinates{ 0L,0L };
-
-        friend std::ostream& operator<<(std::ostream& out, const Stop& stop);
     };
 
     struct Bus
@@ -71,8 +60,6 @@ namespace transport_catalogue
         double geo_route_length = 0L;
         size_t meters_route_length = 0U;
         double curvature = 0L;
-
-        friend std::ostream& operator<<(std::ostream& os, const Bus* route);
     };
 
     struct PairPointersHasher {
@@ -101,10 +88,7 @@ namespace transport_catalogue
         const Stop* FindStop(std::string_view);
         Bus* FindBus(std::string_view);
 
-        void GetBusInfo(std::string_view, std::string&);
-        void GetBusesForStop(std::string_view, std::string&);
-
-        void ProcessInputQuery(InputQuery&);
+        std::vector<Bus*> GetBusesForStop(std::string_view stop_name);
 
     private:
         std::deque<Stop> stops_;
@@ -112,11 +96,12 @@ namespace transport_catalogue
         std::deque<Bus> buses_;
         std::unordered_map<std::string_view, Bus*> busname_to_bus_;
         std::unordered_map<std::pair<const Stop*, const Stop*>, size_t, PairPointersHasher> distances_map_;
+        std::unordered_map<const Stop*, std::vector<Bus*>> buses_in_stop_;
 
         std::string_view GetStopName(const Stop* stop_ptr);
         std::string_view GetStopName(const Stop stop);
 
-        std::string_view GetBusName(const Bus* route_ptr);
-        std::string_view GetBusName(const Bus route);
+        std::string_view GetBusName(const Bus* bus_ptr);
+        std::string_view GetBusName(const Bus bus);
     };
 }
