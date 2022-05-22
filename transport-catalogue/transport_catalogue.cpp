@@ -2,8 +2,6 @@
 
 namespace transport_catalogue
 {
-
-
     TransportCatalogue::TransportCatalogue()
     {}
 
