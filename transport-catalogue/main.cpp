@@ -12,7 +12,7 @@ int main()
     transport_catalogue::TransportCatalogue trans_cat_;
 
     transport_catalogue::input_reader::ProcessInput(trans_cat_, std::cin);
-    transport_catalogue::stat_reader::ProcessRequest(trans_cat_, std::cin);
+    transport_catalogue::stat_reader::ProcessRequests(trans_cat_, std::cin, std::cout);
 
     return 0;
 }
