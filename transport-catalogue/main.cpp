@@ -1,18 +1,18 @@
-#include "geo.h"
-#include "input_reader.h"
+#include "json_reader.h"
 #include "transport_catalogue.h"
-#include "stat_reader.h"
+#include "json.h"
+#include "request_handler.h"
+#include "map_renderer.h"
 
-#include <sstream>
+#include <fstream>
+#include <vector>
 
-int main()
-{
-    using namespace std::string_literals;
 
+int main() {
     transport_catalogue::TransportCatalogue trans_cat_;
+    renderer::MapRenderer mr;
 
-    transport_catalogue::input_reader::ProcessInput(trans_cat_, std::cin);
-    transport_catalogue::stat_reader::ProcessRequests(trans_cat_, std::cin, std::cout);
+    json_reader::JsonReader input(std::cin, trans_cat_, mr);
+    input.GetInfo(std::cout);
 
-    return 0;
 }
