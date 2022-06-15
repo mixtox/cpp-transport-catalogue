@@ -80,16 +80,16 @@ namespace renderer {
         double zoom_coeff_ = 0;
     };
 
-class MapRenderer {
-public:
+    class MapRenderer {
+    public:
 
-    void SetRendererSettings(RenderSettings& settings);
+        void SetRendererSettings(RenderSettings& settings);
 
-    svg::Document GetSVG(const std::map<std::string_view, domain::BusPtr>& routes) const;
+        svg::Document GetSVG(const std::map<std::string_view, domain::BusPtr>& routes) const;
 
-private:
-    RenderSettings render_settings_;
-};
+    private:
+        RenderSettings render_settings_;
+    };
 
 
 }
