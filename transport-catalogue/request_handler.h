@@ -3,12 +3,13 @@
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 #include "json.h"
+#include "json_builder.h"
 #include <optional>
 
 class RequestHandler {
 public:
 
-    RequestHandler(const transport_catalogue::TransportCatalogue &tc, const renderer::MapRenderer &renderer);
+    RequestHandler(const transport_catalogue::TransportCatalogue& tc, const renderer::MapRenderer& renderer);
 
     svg::Document RenderMap() const;
 
