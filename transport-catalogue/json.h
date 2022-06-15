@@ -2,77 +2,54 @@
 
 #include <iostream>
 #include <map>
-#include <string_view>
 #include <string>
-#include <variant>
 #include <vector>
+#include <variant>
 
 namespace json {
 
     class Node;
-
     using Dict = std::map<std::string, Node>;
     using Array = std::vector<Node>;
+    using NodeType = std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>;
 
+    // Эта ошибка должна выбрасываться при ошибках парсинга JSON
     class ParsingError : public std::runtime_error {
     public:
         using runtime_error::runtime_error;
-
-        ParsingError(const std::string& s) : runtime_error(s) {};
-        ParsingError(const char* s) : runtime_error(s) {};
     };
 
-    const std::string_view null_value = "null";
-    const std::string_view true_value = "true";
-    const std::string_view false_value = "false";
-
-    class Node {
+    class Node final : private std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string> {
     public:
-        using ValueType = std::variant<std::nullptr_t, int, double, std::string, bool, Array, Dict>;
+        using variant::variant;
+        using Value = variant;
 
-        Node();
-        Node(std::nullptr_t);
-        Node(int value);
-        Node(double value);
-        Node(const std::string& value);
-        Node(std::string&& value);
-        Node(bool value);
-        Node(const Array& array);
-        Node(Array&& array);
-        Node(const Dict& map);
-        Node(Dict&& map);
+        Node(Value value);
 
-        Node(const Node&) noexcept = default;
-        Node(Node&&) noexcept = default;
-        Node& operator=(const Node&) noexcept = default;
-        Node& operator=(Node&&) noexcept = default;
-        ~Node() = default;
-
-        const ValueType& GetValue() const;
-
-        int AsInt() const;
-        bool AsBool() const;
-        double AsDouble() const; // return double if value is int or double
-        const std::string& AsString() const;
-        const Array& AsArray() const;
-        const Dict& AsMap() const;
-
-        bool IsInt() const;
-        bool IsDouble() const; // int or double
-        bool IsPureDouble() const; // double only
-        bool IsBool() const;
-        bool IsString() const;
         bool IsNull() const;
         bool IsArray() const;
         bool IsMap() const;
+        bool IsBool() const;
+        bool IsInt() const;
+        bool IsDouble() const;
+        bool IsPureDouble() const;
+        bool IsString() const;
 
-    private:
-        ValueType value_;
+        const Array& AsArray() const;
+        const Dict AsMap() const;
+        bool AsBool() const;
+        int AsInt() const;
+        double AsDouble() const;
+        const std::string AsString() const;
+
+        const Value& GetValue() const;
+        Value& GetValue();
+
+
+        bool operator==(const Node& rhs) const;
+        bool operator!=(const Node& rhs) const;
+
     };
-
-    bool operator==(const Node& v, const Node& w);
-
-    bool operator!=(const Node& v, const Node& w);
 
     class Document {
     public:
@@ -80,16 +57,16 @@ namespace json {
 
         const Node& GetRoot() const;
 
+        bool operator==(const Document& rhs);
+        bool operator!=(const Document& rhs);
+
     private:
         Node root_;
     };
 
-    bool operator==(const Document& v, const Document& w);
-
-    bool operator!=(const Document& v, const Document& w);
-
     Document Load(std::istream& input);
 
     void Print(const Document& doc, std::ostream& output);
+    void PrintNode(const Node& node, std::ostream& output);
 
 }  // namespace json
