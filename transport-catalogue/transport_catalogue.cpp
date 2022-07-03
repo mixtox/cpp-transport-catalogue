@@ -2,7 +2,6 @@
 
 namespace transport_catalogue {
 
-
     void TransportCatalogue::AddStop(std::string_view stop_name, geo::Coordinates coordinates) {
         const auto &stop = stops_.emplace_back(domain::Stop{std::string(stop_name), coordinates});
         stopname_to_stop_.insert({stop.name, &stop});
@@ -23,7 +22,7 @@ namespace transport_catalogue {
         route_stops.reserve(stops.size());
 
         auto &route = bus_.emplace_back(domain::Bus{std::string(bus_name), route_stops, is_circle});
-        busname_to_bus_.insert({route.bus_number, &route});
+        busname_to_bus_.insert({route.bus_name, &route});
         for (const auto &stop: stops) {
             const auto *stop_find = FindStop(stop);
             route.bus_stops.push_back(stop_find);
@@ -40,13 +39,13 @@ namespace transport_catalogue {
         }
     }
 
-    const std::optional<Route_info> TransportCatalogue::GetRouteInfo(std::string input) const {
-        Route_info result;
-        const auto *route_info = FindBus(input);
-        if (route_info == nullptr) {
+    const std::optional<Buses_Info> TransportCatalogue::GetRouteInfo(std::string input) const {
+        Buses_Info result;
+        const auto *buses_info = FindBus(input);
+        if (buses_info == nullptr) {
             return {};
         }
-        std::vector<domain::StopPtr> stops_in_route{route_info->bus_stops.begin(), route_info->bus_stops.end()};
+        std::vector<domain::StopPtr> stops_in_route{buses_info->bus_stops.begin(), buses_info->bus_stops.end()};
         std::unordered_set<domain::StopPtr> unique_stop;
         std::for_each(
                 stops_in_route.begin(), stops_in_route.end(),
@@ -55,9 +54,9 @@ namespace transport_catalogue {
                         unique_stop.insert(stop);
                     }
                 });
-        if (!route_info->is_circle) {
-            stops_in_route.insert(stops_in_route.end(), std::next(route_info->bus_stops.rbegin()),
-                                  route_info->bus_stops.rend());
+        if (!buses_info->is_circle) {
+            stops_in_route.insert(stops_in_route.end(), std::next(buses_info->bus_stops.rbegin()),
+                                  buses_info->bus_stops.rend());
         }
         double route_length = 0.0;
         size_t route_length_true = 0;
@@ -65,18 +64,18 @@ namespace transport_catalogue {
             route_length += ComputeDistance((*it)->coordinates, (*(it + 1))->coordinates);
             route_length_true += GetDistance(*it, *(it + 1));
         }
-        result.bus_number = route_info->bus_number;
+        result.route_name = buses_info->bus_name;
         result.stop_count = static_cast<int>(stops_in_route.size());
         result.unique_stop = static_cast<int>(unique_stop.size());
-        result.route_length = route_length_true;
+        result.route_length = double(route_length_true);
         result.curvature = route_length_true / route_length;
 
         return result;
     }
 
-    const std::unordered_set<domain::BusPtr>* TransportCatalogue::GetBusesForStop(std::string_view stop_name) const{
-        if (FindStop(stop_name)) {
-            return &buses_in_stop_.at(FindStop(stop_name));
+    const std::unordered_set<domain::BusPtr>* TransportCatalogue::GetBusesForStop(std::string_view input) const{
+        if (FindStop(input)) {
+            return &buses_in_stop_.at(FindStop(input));
         } else {
             return nullptr;
         }
@@ -87,10 +86,10 @@ namespace transport_catalogue {
         distances_map_[stop_pair] = distance;
     }
 
-    double TransportCatalogue::GetDistance(domain::StopPtr first_stop, domain::StopPtr second_stop) const{
+    size_t TransportCatalogue::GetDistance(domain::StopPtr first_stop, domain::StopPtr second_stop) const{
         auto pair_stop = std::make_pair(first_stop, second_stop);
         if (distances_map_.find(pair_stop) != distances_map_.end()) {
-            return distances_map_.at(pair_stop);
+            return size_t(distances_map_.at(pair_stop));
         }
         return GetDistance(second_stop, first_stop);
     }
@@ -98,10 +97,13 @@ namespace transport_catalogue {
     const std::map<std::string_view, domain::BusPtr> TransportCatalogue::GetAllRouteInfo() const {
         std::map<std::string_view, domain::BusPtr> result;
         for (const auto& bus : bus_) {
-            result[bus.bus_number] = &bus;
+            result[bus.bus_name] = &bus;
         }
         return result;
     }
 
+    const std::unordered_map<std::string_view, domain::StopPtr> TransportCatalogue::GetAllStop() const {
+        return stopname_to_stop_;
+    }
 
 }
