@@ -4,19 +4,20 @@
 namespace json_reader {
 
     JsonReader::JsonReader(std::istream &input, transport_catalogue::TransportCatalogue &catalogue,
-                           renderer::MapRenderer &renderer)
-            :input_(json::Load(input)), tc_(catalogue), mr_(renderer) {
+                           renderer::MapRenderer &renderer, transport_router::TransportRouter &router)
+            :input_(json::Load(input)), tc_(catalogue), mr_(renderer), tr_(router) {
         ParseStop();
         ParseBus();
+
     }
 
     void JsonReader::ParseStop() {
         using namespace std::string_literals;
-        auto requests = input_.GetRoot().AsMap().at("base_requests"s).AsArray();
+        auto requests = input_.GetRoot().AsDict().at("base_requests"s).AsArray();
 
         for (const auto& request : requests) {
-            if (request.AsMap().at("type"s) == "Stop"s) {
-                const auto& request_map = request.AsMap();
+            if (request.AsDict().at("type"s) == "Stop"s) {
+                const auto& request_map = request.AsDict();
                 const auto& stop_name = request_map.at("name"s).AsString();
                 const auto& latitude = request_map.at("latitude"s).AsDouble();
                 const auto& longitude = request_map.at("longitude"s).AsDouble();
@@ -25,10 +26,10 @@ namespace json_reader {
         }
 
         for (const auto& request : requests) {
-            if (request.AsMap().at("type"s) == "Stop"s) {
-                const auto& request_map = request.AsMap();
+            if (request.AsDict().at("type"s) == "Stop"s) {
+                const auto& request_map = request.AsDict();
                 const auto& first_stop = request_map.at("name"s).AsString();
-                const auto& stop_distance = request_map.at("road_distances"s).AsMap();
+                const auto& stop_distance = request_map.at("road_distances"s).AsDict();
                 for (auto [second_stop, real_distance] : stop_distance) {
                     tc_.AddDistance(tc_.FindStop(std::string(first_stop)), tc_.FindStop(second_stop), real_distance.AsDouble());
                 }
@@ -38,10 +39,10 @@ namespace json_reader {
 
     void JsonReader::ParseBus() {
         using namespace std::string_literals;
-        auto requests = input_.GetRoot().AsMap().at("base_requests"s).AsArray();
+        auto requests = input_.GetRoot().AsDict().at("base_requests"s).AsArray();
         for (const auto& request : requests) {
-            if (request.AsMap().at("type"s) == "Bus"s) {
-                const auto& request_map = request.AsMap();
+            if (request.AsDict().at("type"s) == "Bus"s) {
+                const auto& request_map = request.AsDict();
                 const auto& bus_name = request_map.at("name"s).AsString();
                 const auto& stops_name = request_map.at("stops"s).AsArray();
                 std::vector<std::string> stops_in_tc;
@@ -58,14 +59,17 @@ namespace json_reader {
 
     void JsonReader::GetInfo(std::ostream &out) {
         using namespace std::string_literals;
-        RequestHandler handler(tc_, mr_);
+        RequestHandler handler(tc_, mr_, tr_);
+
+        bool tr_first_init = true;
+
         json::Array result;
-        auto requests = input_.GetRoot().AsMap().at("stat_requests"s).AsArray();
+        auto requests = input_.GetRoot().AsDict().at("stat_requests"s).AsArray();
         
         for (const auto request : requests) {
-            std::string type = request.AsMap().at("type"s).AsString();
+            std::string type = request.AsDict().at("type"s).AsString();
             if (type == "Bus"s) {
-                result.push_back(std::move(handler.GetRoute(request)));
+                result.push_back(std::move(handler.GetBus(request)));
             }
             if (type == "Stop"s) {
                 result.push_back(std::move(handler.GetStop(request)));
@@ -74,6 +78,14 @@ namespace json_reader {
                 renderer::RenderSettings renderSettings = ReadRenderSettings();
                 mr_.SetRendererSettings(renderSettings);
                 result.push_back(std::move(handler.GetMap(request)));
+            }
+            if (type == "Route"s) {
+                if (tr_first_init) {
+                    domain::RouteSettings route_settings = ReadRouteSettings();
+                    tr_.RouteInit(route_settings);
+                    tr_first_init = false;
+                }
+                result.push_back(std::move(handler.GetRoute(request)));
             }
         }
         
@@ -85,7 +97,7 @@ namespace json_reader {
         using namespace std::string_literals;
         renderer::RenderSettings render_settings;
         
-        auto read_settings = input_.GetRoot().AsMap().at("render_settings"s).AsMap();
+        auto read_settings = input_.GetRoot().AsDict().at("render_settings"s).AsDict();
         render_settings.width = read_settings.at("width"s).AsDouble();
         render_settings.height = read_settings.at("height"s).AsDouble();
         render_settings.padding = read_settings.at("padding"s).AsDouble();
@@ -129,5 +141,15 @@ namespace json_reader {
         
         return render_settings;
     }
+
+    domain::RouteSettings JsonReader::ReadRouteSettings() {
+        using namespace std::string_literals;
+        domain::RouteSettings setting;
+        json::Dict route_settings = input_.GetRoot().AsDict().at("routing_settings"s).AsDict();
+        setting.bus_wait_time = route_settings.at("bus_wait_time"s).AsInt();
+        setting.bus_velocity = route_settings.at("bus_velocity"s).AsDouble();
+        return setting;
+    }
+
 
 }
