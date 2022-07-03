@@ -17,13 +17,22 @@
 
 namespace transport_catalogue {
 
-    struct Route_info {
-        std::string_view bus_number;
-        int stop_count;
-        int unique_stop;
-        double route_length;
-        double curvature;
+    struct Buses_Info {
+        std::string_view route_name;
+        int stop_count = 0;
+        int unique_stop = 0;
+        double route_length = 0.0;
+        double curvature = 0.0;
     };
+
+    namespace detail {
+        struct DistanceHasher {
+            size_t operator()(const std::pair<domain::StopPtr, domain::StopPtr> stops_pair) const;
+
+        private:
+            std::hash<const void *> hasher;
+        };
+    }
 
     class TransportCatalogue {
     public:
@@ -36,10 +45,12 @@ namespace transport_catalogue {
 
         void AddDistance(domain::StopPtr first_stop, domain::StopPtr second_stop, double distance);
 
-        const std::optional<Route_info> GetRouteInfo(std::string input) const;
+        const std::optional<Buses_Info> GetRouteInfo(std::string input) const;
         const std::unordered_set<domain::BusPtr>* GetBusesForStop(std::string_view input) const;
-        double GetDistance(domain::StopPtr first_stop, domain::StopPtr second_stop) const;
+        size_t GetDistance(domain::StopPtr first_stop, domain::StopPtr second_stop) const;
+
         const std::map<std::string_view, domain::BusPtr> GetAllRouteInfo() const;
+        const std::unordered_map<std::string_view, domain::StopPtr> GetAllStop() const;
 
     private:
 
