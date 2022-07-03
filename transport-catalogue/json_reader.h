@@ -17,7 +17,7 @@ namespace json_reader {
     public:
 
         JsonReader(std::istream &input, transport_catalogue::TransportCatalogue &catalogue,
-                   renderer::MapRenderer &renderer);
+                   renderer::MapRenderer &renderer, transport_router::TransportRouter &router);
 
         void GetInfo (std::ostream &out);
 
@@ -25,12 +25,14 @@ namespace json_reader {
 
         json::Document input_;
         transport_catalogue::TransportCatalogue& tc_;
-        renderer::MapRenderer mr_;
+        renderer::MapRenderer& mr_;
+        transport_router::TransportRouter& tr_;
 
         void ParseStop ();
         void ParseBus ();
 
         renderer::RenderSettings ReadRenderSettings ();
+        domain::RouteSettings ReadRouteSettings ();
+
     };
 }
-
