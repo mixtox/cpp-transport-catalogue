@@ -332,6 +332,10 @@ namespace json {
         return holds_alternative<Array>(*this);
     }
 
+    bool Node::IsDict() const {
+        return holds_alternative<Dict>(*this);
+    }
+
     bool Node::IsMap() const {
         return holds_alternative<Dict>(*this);
     }
@@ -361,6 +365,13 @@ namespace json {
             throw logic_error("It is not Array!"s);
         }
         return get<Array>(*this);
+    }
+
+    const Dict Node::AsDict() const {
+        if (!IsDict()) {
+            throw logic_error("It is not Dict!"s);
+        }
+        return get<Dict>(*this);
     }
 
     const Dict Node::AsMap() const {
