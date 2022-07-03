@@ -36,4 +36,9 @@ namespace domain {
     private:
             std::hash<const void*> hasher;
     };
+    
+    struct RouteSettings {
+        double bus_velocity = 1.0;
+        int bus_wait_time = 1;
+    };
 }
