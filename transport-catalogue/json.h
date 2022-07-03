@@ -28,6 +28,7 @@ namespace json {
 
         bool IsNull() const;
         bool IsArray() const;
+        bool IsDict() const;
         bool IsMap() const;
         bool IsBool() const;
         bool IsInt() const;
@@ -36,6 +37,7 @@ namespace json {
         bool IsString() const;
 
         const Array& AsArray() const;
+        const Dict AsDict() const;
         const Dict AsMap() const;
         bool AsBool() const;
         int AsInt() const;
