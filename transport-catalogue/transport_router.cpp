@@ -6,8 +6,8 @@ namespace transport_router {
             : tc_(catalogue) {}
 
     void TransportRouter::SetRouteSettings(const domain::RouteSettings &settings) {
-        settings_.bus_velocity = settings.bus_velocity / 3.6;        //Переводим скорость из км/ч в м/с
-        settings_.bus_wait_time = settings.bus_wait_time * 60;        //Переводим минуты в секунды
+        settings_.bus_velocity = settings.bus_velocity / 3.6;        //Convert km/h in m/s
+        settings_.bus_wait_time = settings.bus_wait_time * 60;        //Convert minutes in seconds
     }
 
     DistanceCalc::DistanceCalc(const transport_catalogue::TransportCatalogue &tc,
@@ -50,7 +50,7 @@ namespace transport_router {
 
     void TransportRouter::FillGraphStop() {
         auto all_stops = tc_.GetAllStop();
-        graph_ = std::make_unique<graph::DirectedWeightedGraph<TravelDuration>>(all_stops.size());
+        graph_ = graph::DirectedWeightedGraph<TravelDuration>(all_stops.size());
         graph::VertexId vertex_counter = 0;
 
         for (const auto &[_, stop_ptr]: all_stops) {
@@ -59,7 +59,7 @@ namespace transport_router {
     }
 
     void TransportRouter::FillGraphBuses() {
-        for (const auto &[_, route_ptr]: tc_.GetAllRouteInfo()) {
+        for (const auto &[_, route_ptr]: tc_.GetAllBusesInfo()) {
             const auto &stops = route_ptr->bus_stops;
 
             DistanceCalc distance_calc(tc_, route_ptr);
@@ -68,8 +68,8 @@ namespace transport_router {
                     TravelDuration travel_dur(j - i,
                                               settings_.bus_wait_time,
                                               distance_calc.DistanceBetweenStop(i, j) / settings_.bus_velocity);
-                    TravelProperties travel_unit{stops[i], stops[j], route_ptr, travel_dur};
-                    graph_->AddEdge(
+                    TravelProps travel_unit{stops[i], stops[j], route_ptr, travel_dur};
+                    graph_.AddEdge(
                             graph::Edge<TravelDuration>{graph_vertexes_[travel_unit.from],
                                                         graph_vertexes_[travel_unit.to],
                                                         travel_dur});
@@ -79,8 +79,8 @@ namespace transport_router {
                         TravelDuration travel_dur(j - i,
                                                   settings_.bus_wait_time,
                                                   distance_calc.DistanceBetweenStop(j, i) / settings_.bus_velocity);
-                        TravelProperties travel_unit{stops[i], stops[j], route_ptr, travel_dur};
-                        graph_->AddEdge(graph::Edge<TravelDuration>{graph_vertexes_[travel_unit.to],
+                        TravelProps travel_unit{stops[i], stops[j], route_ptr, travel_dur};
+                        graph_.AddEdge(graph::Edge<TravelDuration>{graph_vertexes_[travel_unit.to],
                                                                     graph_vertexes_[travel_unit.from], travel_dur});
                         graph_edges_.push_back(std::move(travel_unit));
                     }
@@ -88,7 +88,7 @@ namespace transport_router {
             }
         }
 
-        router_ = std::make_unique<graph::Router<TravelDuration>>(*graph_);
+        router_ = std::make_unique<graph::Router<TravelDuration>>(graph_);
     }
 
     void TransportRouter::RouteInit(const domain::RouteSettings &settings) {
@@ -97,7 +97,7 @@ namespace transport_router {
         FillGraphBuses();
     }
 
-    std::optional<std::vector<const TravelProperties *>>
+    std::optional<std::vector<const TravelProps *>>
     TransportRouter::FindRoute(std::string_view from, std::string_view to) const {
 
         domain::StopPtr stop_from = tc_.FindStop(from);
@@ -107,7 +107,7 @@ namespace transport_router {
             return std::nullopt;
         }
 
-        std::vector<const transport_router::TravelProperties *> result;
+        std::vector<const transport_router::TravelProps *> result;
         if (stop_from == stop_to) {
             return result;
         }
@@ -126,5 +126,39 @@ namespace transport_router {
 
         return result;
     }
+
+    const domain::RouteSettings TransportRouter::GetRouteSettings() const {
+        return settings_;
+    }
+
+    const std::unordered_map<domain::StopPtr, graph::VertexId> TransportRouter::GetGraphVertex() const {
+        return graph_vertexes_;
+    }
+
+    const std::vector<TravelProps> TransportRouter::GetGraphEdges() const {
+        return graph_edges_;
+    }
+
+    const std::shared_ptr<graph::Router<TravelDuration>> TransportRouter::GetRouter() const {
+        return router_;
+    }
+
+    const graph::DirectedWeightedGraph<TravelDuration> TransportRouter::GetGraph() const {
+        return graph_;
+    }
+
+    void TransportRouter::SetGraphVertex(std::unordered_map<domain::StopPtr, graph::VertexId> &graph_vertex) {
+        graph_vertexes_ = std::move(graph_vertex);
+    }
+
+    void TransportRouter::SetGraphEdges(std::vector<TravelProps> &graph_edges) {
+        graph_edges_ = std::move(graph_edges);
+    }
+
+    void TransportRouter::SetGraph(graph::DirectedWeightedGraph<TravelDuration> &graph) {
+        graph_ = std::move(graph);
+        router_ = std::make_unique<graph::Router<TravelDuration>>(graph_);
+    }
+
 
 }
