@@ -13,7 +13,7 @@ namespace json {
     using Array = std::vector<Node>;
     using NodeType = std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>;
 
-    // Эта ошибка должна выбрасываться при ошибках парсинга JSON
+// Эта ошибка должна выбрасываться при ошибках парсинга JSON
     class ParsingError : public std::runtime_error {
     public:
         using runtime_error::runtime_error;
@@ -29,7 +29,6 @@ namespace json {
         bool IsNull() const;
         bool IsArray() const;
         bool IsDict() const;
-        bool IsMap() const;
         bool IsBool() const;
         bool IsInt() const;
         bool IsDouble() const;
@@ -38,7 +37,6 @@ namespace json {
 
         const Array& AsArray() const;
         const Dict AsDict() const;
-        const Dict AsMap() const;
         bool AsBool() const;
         int AsInt() const;
         double AsDouble() const;
