@@ -30,8 +30,24 @@ public:
 
     size_t GetVertexCount() const;
     size_t GetEdgeCount() const;
+
     const Edge<Weight>& GetEdge(EdgeId edge_id) const;
     IncidentEdgesRange GetIncidentEdges(VertexId vertex) const;
+
+    const std::vector<Edge<Weight>>& GetEdges() const {
+        return edges_;
+    }
+    const std::vector<IncidenceList>& GetIncidenceLists() const{
+        return incidence_lists_;
+    }
+
+    void SetEdge(std::vector<Edge<Weight>> &edges) {
+        edges_ = std::move(edges);
+    }
+
+    void SetIncidenceList(std::vector<IncidenceList> &incidence_lists) {
+        incidence_lists_ = std::move(incidence_lists);
+    }
 
 private:
     std::vector<Edge<Weight>> edges_;
