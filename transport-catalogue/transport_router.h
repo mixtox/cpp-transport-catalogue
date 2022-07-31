@@ -3,9 +3,7 @@
 #include "transport_catalogue.h"
 #include "graph.h"
 #include "router.h"
-
 #include <memory>
-#include "log_duration.h"
 
 
 namespace transport_router {
@@ -22,7 +20,7 @@ namespace transport_router {
         double travel_time = 0.0;
     };
 
-    struct TravelProperties {
+    struct TravelProps {
         domain::StopPtr from = nullptr;
         domain::StopPtr to = nullptr;
         domain::BusPtr route = nullptr;
@@ -48,7 +46,6 @@ namespace transport_router {
 
     };
 
-
     class TransportRouter {
     public:
 
@@ -56,24 +53,37 @@ namespace transport_router {
 
         void RouteInit(const domain::RouteSettings &settings);
 
-        std::optional<std::vector<const transport_router::TravelProperties*>> FindRoute(std::string_view from, std::string_view to) const;
+        std::optional<std::vector<const transport_router::TravelProps*>> FindRoute(std::string_view from, std::string_view to) const;
+
+        const domain::RouteSettings GetRouteSettings() const;
+
+        const std::unordered_map<domain::StopPtr, graph::VertexId> GetGraphVertex() const;
+        const std::vector<TravelProps> GetGraphEdges() const;
+
+        const std::shared_ptr<graph::Router<TravelDuration>> GetRouter() const;
+        const graph::DirectedWeightedGraph<TravelDuration> GetGraph() const;
+
+        void SetRouteSettings(const domain::RouteSettings &settings);
+
+        void SetGraphVertex(std::unordered_map<domain::StopPtr, graph::VertexId>& graph_vertex);
+        void SetGraphEdges(std::vector<TravelProps> &graph_edges);
+
+        void SetGraph(graph::DirectedWeightedGraph<TravelDuration> &graph);
 
     private:
 
         domain::RouteSettings settings_;
-        const transport_catalogue::TransportCatalogue &tc_;
-        std::unique_ptr<graph::DirectedWeightedGraph<TravelDuration>> graph_;
-        std::unordered_map<domain::StopPtr, graph::VertexId> graph_vertexes_;
-        std::vector<TravelProperties> graph_edges_;
-        std::unique_ptr<graph::Router<TravelDuration>> router_;
 
-        void SetRouteSettings(const domain::RouteSettings &settings);
+        const transport_catalogue::TransportCatalogue &tc_;
+        graph::DirectedWeightedGraph<TravelDuration> graph_;
+        std::unordered_map<domain::StopPtr, graph::VertexId> graph_vertexes_;
+        std::vector<TravelProps> graph_edges_;
+
+        std::shared_ptr<graph::Router<TravelDuration>> router_;
 
         void FillGraphStop();
         void FillGraphBuses();
-
     };
-
 
 }
 
