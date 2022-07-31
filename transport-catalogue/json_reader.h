@@ -9,30 +9,36 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <filesystem>
 
 
 namespace json_reader {
-
     class JsonReader {
     public:
-
-        JsonReader(std::istream &input, transport_catalogue::TransportCatalogue &catalogue,
+        JsonReader(transport_catalogue::TransportCatalogue &catalogue,
                    renderer::MapRenderer &renderer, transport_router::TransportRouter &router);
 
-        void GetInfo (std::ostream &out);
+        void ReadInfo(std::istream &input);
+        void ReadRequest(std::istream &input);
+
+        void GetResult(std::ostream &out);
+        const std::string GetSerializationSetting() const;
 
     private:
+        std::string file_names_;
+        json::Document input_ = json::Document(json::Node());
 
-        json::Document input_;
-        transport_catalogue::TransportCatalogue& tc_;
-        renderer::MapRenderer& mr_;
-        transport_router::TransportRouter& tr_;
+        transport_catalogue::TransportCatalogue &tc_;
+        renderer::MapRenderer &mr_;
+        transport_router::TransportRouter &tr_;
 
-        void ParseStop ();
-        void ParseBus ();
+        void ParseStop();
+        void ParseBus();
 
-        renderer::RenderSettings ReadRenderSettings ();
-        domain::RouteSettings ReadRouteSettings ();
+        renderer::RenderSettings ReadRenderSettings();
+        domain::RouteSettings ReadRouteSettings();
 
+        void ReadSerializationSettings();
     };
 }
+
