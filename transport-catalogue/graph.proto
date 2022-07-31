@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package router_proto;
+
+//graph_vertexes_
+message Graph_Vertex_ID {
+  bytes stop_name = 1;
+  uint64 vertex_ID = 2;
+}
+
+//graph_edges_
+message Travel_Duration {
+  int32 stop_number = 1;
+  double waiting_time = 2;
+  double travel_time = 3;
+}
+
+message Travel_Props {
+  bytes stop_name_from = 1;
+  bytes stop_name_to = 2;
+  bytes bus_name = 3;
+  Travel_Duration travel_duration = 4;
+}
+
+//graph_
+message Edge {
+  uint64 edge_from = 1;
+  uint64 edge_to = 2;
+  Travel_Duration weight_graph = 4;
+}
+
+message Incidence_List {
+  repeated uint64 incidence_list = 1;
+}
+message Graph {
+  repeated Edge edges_in_graph = 1;
+  repeated Incidence_List incidence_lists = 2;
+}
+
+message Graphs {
+  repeated Graph_Vertex_ID graph_vertex = 1;
+  repeated Travel_Props graph_edges = 2;
+  Graph graph = 3;
+}
