@@ -3,11 +3,34 @@
 
 namespace json_reader {
 
-    JsonReader::JsonReader(std::istream &input, transport_catalogue::TransportCatalogue &catalogue,
-                           renderer::MapRenderer &renderer, transport_router::TransportRouter &router)
-            :input_(json::Load(input)), tc_(catalogue), mr_(renderer), tr_(router) {
+
+    JsonReader::JsonReader(transport_catalogue::TransportCatalogue &catalogue, renderer::MapRenderer &renderer,
+                           transport_router::TransportRouter &router)
+            : tc_(catalogue), mr_(renderer), tr_(router) {}
+
+
+    void JsonReader::ReadInfo(std::istream &input) {
+
+        input_ = json::Load(input);
+
+        ReadSerializationSettings();
         ParseStop();
         ParseBus();
+
+        renderer::RenderSettings renderSettings = ReadRenderSettings();
+        mr_.SetRendererSettings(renderSettings);
+
+        domain::RouteSettings route_settings = ReadRouteSettings();
+        tr_.RouteInit(route_settings);
+
+    }
+
+    void JsonReader::ReadRequest(std::istream &input) {
+        using namespace std::string_literals;
+
+        input_ = json::Load(input);
+
+        ReadSerializationSettings();
 
     }
 
@@ -15,23 +38,24 @@ namespace json_reader {
         using namespace std::string_literals;
         auto requests = input_.GetRoot().AsDict().at("base_requests"s).AsArray();
 
-        for (const auto& request : requests) {
+        for (const auto &request: requests) {
             if (request.AsDict().at("type"s) == "Stop"s) {
-                const auto& request_map = request.AsDict();
-                const auto& stop_name = request_map.at("name"s).AsString();
-                const auto& latitude = request_map.at("latitude"s).AsDouble();
-                const auto& longitude = request_map.at("longitude"s).AsDouble();
+                const auto &request_map = request.AsDict();
+                const auto &stop_name = request_map.at("name"s).AsString();
+                const auto &latitude = request_map.at("latitude"s).AsDouble();
+                const auto &longitude = request_map.at("longitude"s).AsDouble();
                 tc_.AddStop(stop_name, {latitude, longitude});
             }
         }
 
-        for (const auto& request : requests) {
+        for (const auto &request: requests) {
             if (request.AsDict().at("type"s) == "Stop"s) {
-                const auto& request_map = request.AsDict();
-                const auto& first_stop = request_map.at("name"s).AsString();
-                const auto& stop_distance = request_map.at("road_distances"s).AsDict();
-                for (auto [second_stop, real_distance] : stop_distance) {
-                    tc_.AddDistance(tc_.FindStop(std::string(first_stop)), tc_.FindStop(second_stop), real_distance.AsDouble());
+                const auto &request_map = request.AsDict();
+                const auto &first_stop = request_map.at("name"s).AsString();
+                const auto &stop_distance = request_map.at("road_distances"s).AsDict();
+                for (auto [second_stop, real_distance]: stop_distance) {
+                    tc_.SetDistanceStops(tc_.FindStop(first_stop), tc_.FindStop(second_stop),
+                                         real_distance.AsDouble());
                 }
             }
         }
@@ -40,33 +64,31 @@ namespace json_reader {
     void JsonReader::ParseBus() {
         using namespace std::string_literals;
         auto requests = input_.GetRoot().AsDict().at("base_requests"s).AsArray();
-        for (const auto& request : requests) {
+        for (const auto &request: requests) {
             if (request.AsDict().at("type"s) == "Bus"s) {
-                const auto& request_map = request.AsDict();
-                const auto& bus_name = request_map.at("name"s).AsString();
-                const auto& stops_name = request_map.at("stops"s).AsArray();
+                const auto &request_map = request.AsDict();
+                const auto &bus_name = request_map.at("name"s).AsString();
+                const auto &stops_name = request_map.at("stops"s).AsArray();
                 std::vector<std::string> stops_in_tc;
                 for_each(
                         stops_name.begin(), stops_name.end(),
-                        [&stops_in_tc](const auto stop){
+                        [&stops_in_tc](const auto stop) {
                             stops_in_tc.push_back(stop.AsString());
                         }
-                        );
+                );
                 tc_.AddBus(bus_name, stops_in_tc, request_map.at("is_roundtrip"s).AsBool());
             }
         }
     }
 
-    void JsonReader::GetInfo(std::ostream &out) {
+    void JsonReader::GetResult(std::ostream &out) {
         using namespace std::string_literals;
         RequestHandler handler(tc_, mr_, tr_);
 
-        bool tr_first_init = true;
-
         json::Array result;
         auto requests = input_.GetRoot().AsDict().at("stat_requests"s).AsArray();
-        
-        for (const auto request : requests) {
+
+        for (const auto request: requests) {
             std::string type = request.AsDict().at("type"s).AsString();
             if (type == "Bus"s) {
                 result.push_back(std::move(handler.GetBus(request)));
@@ -75,20 +97,13 @@ namespace json_reader {
                 result.push_back(std::move(handler.GetStop(request)));
             }
             if (type == "Map"s) {
-                renderer::RenderSettings renderSettings = ReadRenderSettings();
-                mr_.SetRendererSettings(renderSettings);
                 result.push_back(std::move(handler.GetMap(request)));
             }
             if (type == "Route"s) {
-                if (tr_first_init) {
-                    domain::RouteSettings route_settings = ReadRouteSettings();
-                    tr_.RouteInit(route_settings);
-                    tr_first_init = false;
-                }
                 result.push_back(std::move(handler.GetRoute(request)));
             }
         }
-        
+
         json::Document doc(std::move(result));
         json::Print(doc, out);
     }
@@ -96,7 +111,7 @@ namespace json_reader {
     renderer::RenderSettings JsonReader::ReadRenderSettings() {
         using namespace std::string_literals;
         renderer::RenderSettings render_settings;
-        
+
         auto read_settings = input_.GetRoot().AsDict().at("render_settings"s).AsDict();
         render_settings.width = read_settings.at("width"s).AsDouble();
         render_settings.height = read_settings.at("height"s).AsDouble();
@@ -109,7 +124,7 @@ namespace json_reader {
         render_settings.stop_label_font_size = read_settings.at("stop_label_font_size"s).AsInt();
         render_settings.stop_label_offset = svg::Point(read_settings.at("stop_label_offset"s).AsArray()[0].AsDouble(),
                                                        read_settings.at("stop_label_offset"s).AsArray()[1].AsDouble());
-        
+
         if (read_settings.at("underlayer_color"s).IsString()) {
             render_settings.underlayer_color = read_settings.at("underlayer_color"s).AsString();
         } else if (read_settings.at("underlayer_color"s).AsArray().size() == 3) {
@@ -123,8 +138,8 @@ namespace json_reader {
                                                          read_settings.at("underlayer_color"s).AsArray()[3].AsDouble());
         }
         render_settings.underlayer_width = read_settings.at("underlayer_width"s).AsDouble();
-        
-        for (const auto& color : read_settings.at("color_palette"s).AsArray()) {
+
+        for (const auto &color: read_settings.at("color_palette"s).AsArray()) {
             if (color.IsString()) {
                 render_settings.color_palette.push_back(color.AsString());
             } else if (color.AsArray().size() == 3) {
@@ -138,7 +153,7 @@ namespace json_reader {
                                                                   color.AsArray()[3].AsDouble()));
             }
         }
-        
+
         return render_settings;
     }
 
@@ -151,5 +166,13 @@ namespace json_reader {
         return setting;
     }
 
+    void JsonReader::ReadSerializationSettings() {
+        using namespace std::string_literals;
+        json::Dict serialization_settings = input_.GetRoot().AsDict().at("serialization_settings"s).AsDict();
+        file_names_ = serialization_settings.at("file"s).AsString();
+    }
 
+    const std::string JsonReader::GetSerializationSetting() const {
+        return file_names_;
+    }
 }
