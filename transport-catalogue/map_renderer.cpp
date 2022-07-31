@@ -74,7 +74,7 @@ namespace renderer {
             size_t color_index = counter % render_settings_.color_palette.size();
 
             svg::Text underlayer_text;
-            underlayer_text.SetData(route->bus_number).
+            underlayer_text.SetData(route->bus_name).
                             SetPosition(projector(route->bus_stops.front()->coordinates)).
                             SetOffset(render_settings_.bus_label_offset).
                             SetFillColor(render_settings_.underlayer_color).
@@ -87,7 +87,7 @@ namespace renderer {
                             SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
 
             svg::Text route_name;
-            route_name.SetData(route->bus_number).
+            route_name.SetData(route->bus_name).
                         SetPosition(projector(route->bus_stops.front()->coordinates)).
                         SetOffset(render_settings_.bus_label_offset).
                         SetFontFamily("Verdana"s).
@@ -140,4 +140,9 @@ namespace renderer {
 
         return result;
     }
+
+    const RenderSettings MapRenderer::GetRenderSetting() const {
+        return render_settings_;
+    }
+
 }
