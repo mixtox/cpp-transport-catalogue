@@ -8,13 +8,13 @@ RequestHandler::RequestHandler(const transport_catalogue::TransportCatalogue &tc
     , tr_(router) {}
 
 svg::Document RequestHandler::RenderMap() const {
-    return renderer_.GetSVG(tc_.GetAllRouteInfo());
+    return renderer_.GetSVG(tc_.GetAllBusesInfo());
 }
 
 json::Dict RequestHandler::GetBus(const json::Node& request) {
     using namespace std::string_literals;
 
-    const auto bus_info = tc_.GetRouteInfo(request.AsDict().at("name"s).AsString());
+    const auto bus_info = tc_.GetBusInfo(request.AsDict().at("name"s).AsString());
     int id = request.AsDict().at("id"s).AsInt();
 
     if (bus_info.has_value()) {
@@ -48,7 +48,7 @@ json::Dict RequestHandler::GetBus(const json::Node& request) {
 
 json::Dict RequestHandler::GetStop(const json::Node& request) {
     using namespace std::string_literals;
-    auto stop_info = tc_.GetBusesForStop(request.AsDict().at("name"s).AsString());
+    auto stop_info = tc_.GetStopInfo(request.AsDict().at("name"s).AsString());
     int id = request.AsDict().at("id"s).AsInt();
 
     if (stop_info) {
@@ -88,7 +88,7 @@ json::Dict RequestHandler::GetMap(const json::Node& request) {
     using namespace std::string_literals;
 
     std::stringstream stream;
-    renderer_.GetSVG(tc_.GetAllRouteInfo()).Render(stream);
+    renderer_.GetSVG(tc_.GetAllBusesInfo()).Render(stream);
 
     int id = request.AsDict().at("id"s).AsInt();
 
