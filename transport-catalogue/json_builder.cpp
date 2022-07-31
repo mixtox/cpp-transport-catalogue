@@ -4,10 +4,10 @@ namespace json {
 
     DictKeyContext Builder::Key(std::string key) {
         using namespace std::string_literals;
-        if (nodes_.back()->IsMap() && !key_) {
+        if (nodes_stack_.back()->IsDict() && !key_) {
             key_ = std::move(key);
         } else {
-            throw std::logic_error("The command \"Key\" in wrong place"s);
+            throw std::logic_error("The command \"Key\" was called in wrong place"s);
         }
         return *this;
     }
@@ -20,88 +20,88 @@ namespace json {
     DictItemContext Builder::StartDict() {
         using namespace std::string_literals;
         if (IsEmpty() || key_ || PrevIsArray()) {
-            nodes_.emplace_back(std::move(AddElement(Dict())));
+            nodes_stack_.emplace_back(std::move(AddElement(Dict())));
             return DictItemContext(*this);
         } else {
-            throw std::logic_error("The command \"StartDict\" in wrong place"s);
+            throw std::logic_error("The command \"StartDict\" was called in wrong place"s);
         }
     }
 
     ArrayItemContext Builder::StartArray() {
         using namespace std::string_literals;
         if (IsEmpty() || key_ || PrevIsArray()) {
-            nodes_.emplace_back(std::move(AddElement(Array())));
+            nodes_stack_.emplace_back(std::move(AddElement(Array())));
             return *this;
         } else {
-            throw std::logic_error("The command \"StartArray\" in wrong place"s);
+            throw std::logic_error("The command \"StartArray\" was called in wrong place"s);
         }
     }
 
     Builder &Builder::EndDict() {
         using namespace std::string_literals;
         if (PrevIsDict()) {
-            nodes_.pop_back();
+            nodes_stack_.pop_back();
             return *this;
         } else {
-            throw std::logic_error("The command \"EndDict\" in wrong place"s);
+            throw std::logic_error("The command \"EndDict\" was called in wrong place"s);
         }
     }
 
     Builder &Builder::EndArray() {
         using namespace std::string_literals;
         if (PrevIsArray()) {
-            nodes_.pop_back();
+            nodes_stack_.pop_back();
             return *this;
         } else {
-            throw std::logic_error("The command \"EndArray\" in wrong place"s);
+            throw std::logic_error("The command \"EndArray\" was called in wrong place"s);
         }
     }
 
     json::Node Builder::Build() {
         using namespace std::string_literals;
-        if (nodes_.size() == 1 && !nodes_.back()->IsNull()) {
+        if (nodes_stack_.size() == 1 && !nodes_stack_.back()->IsNull()) {
             return root_;
         } else {
-            throw std::logic_error("The command \"Build\" in wrong place"s);
+            throw std::logic_error("The command \"Build\" was called in wrong place"s);
         }
     }
 
     bool Builder::IsEmpty() {
-        return nodes_.back()->IsNull();
+        return nodes_stack_.back()->IsNull();
     }
 
     bool Builder::PrevIsArray() {
-        return nodes_.back()->IsArray();
+        return nodes_stack_.back()->IsArray();
     }
 
     bool Builder::PrevIsDict() {
-        return nodes_.back()->IsMap();
+        return nodes_stack_.back()->IsDict();
     }
 
     Node* Builder::AddElement(Node::Value value) {
         using namespace std::string_literals;
         if (IsEmpty()) {
-            nodes_.back()->GetValue() = std::move(value);
-            return nodes_.back();
+            nodes_stack_.back()->GetValue() = std::move(value);
+            return nodes_stack_.back();
         }
         else if (PrevIsArray()) {
-            Array& link_arr = std::get<Array>(nodes_.back()->GetValue());
+            Array& link_arr = std::get<Array>(nodes_stack_.back()->GetValue());
             return &link_arr.emplace_back(value);
         }
         else if (PrevIsDict() && key_) {
-            Dict& link_dict = std::get<Dict>(nodes_.back()->GetValue());
+            Dict& link_dict = std::get<Dict>(nodes_stack_.back()->GetValue());
             auto ptr = link_dict.emplace(make_pair(key_.value(), value));
             key_ = std::nullopt;
             return &ptr.first->second;
         }
         else {
-            throw std::logic_error("The command \"Value\" in wrong place"s);
+            throw std::logic_error("The command \"Value\" was called in wrong place"s);
         }
     }
 
     Builder::Builder()
     : root_(nullptr)
-    , nodes_{&root_}
+    , nodes_stack_{&root_}
     , key_(std::nullopt) {}
 
     DictItemContext::DictItemContext(Builder &builder)
